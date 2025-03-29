@@ -1,4 +1,3 @@
-```markdown
 # Job Application Portal
 
 This is a fully customizable, production‑ready job application platform built for companies that need an alternative to enterprise systems. The platform includes:
