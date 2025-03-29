@@ -175,3 +175,11 @@ Feel free to fork the repository and submit pull requests with improvements or c
 ## License
 
 This project is licensed under the MIT License.
+
+---
+
+## Authors
+
+The UNC-Chapel Hill's Google Developer Student Club (GDSC) team is behind this project. For more information, visit [GDSC UNC GitHub Page](https://github.com/UNC-GDSC).
+
+---
