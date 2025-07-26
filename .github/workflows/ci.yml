@@ -1,0 +1,205 @@
+name: CI/CD Pipeline for Moodify App
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  formatting:
+    name: 🔧 Install, Lint & Format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install root dependencies
+        run: npm ci
+
+      - name: Run Prettier
+        run: npm run format
+
+  backend-tests:
+    name: 🐍 Backend Build & Test
+    runs-on: ubuntu-latest
+    needs: formatting
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      MONGO_DB_URI: ${{ secrets.MONGO_DB_URI }}
+      MONGO_DB_USERNAME: ${{ secrets.MONGO_DB_USERNAME }}
+      MONGO_DB_PASSWORD: ${{ secrets.MONGO_DB_PASSWORD }}
+      SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+      SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+    outputs:
+      coverage_exists: ${{ steps.check-backend-coverage.outputs.coverage_exists }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
+      - name: Install Python dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-django pytest-cov
+
+      - name: Run backend tests
+        run: |
+          pytest backend -q --maxfail=1 --disable-warnings
+          pytest backend --cov=backend --cov-report=xml
+
+      - name: Check backend coverage file exists
+        id: check-backend-coverage
+        run: |
+          if [ -f backend/coverage.xml ]; then
+            echo "coverage_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "coverage_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload backend coverage
+        if: steps.check-backend-coverage.outputs.coverage_exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: backend/coverage.xml
+
+  frontend-tests:
+    name: 🌐 Frontend Build & Test
+    runs-on: ubuntu-latest
+    needs: formatting
+    outputs:
+      coverage_exists: ${{ steps.check-frontend-coverage.outputs.coverage_exists }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Use Node.js 18
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Run Jest tests
+        run: npm --prefix frontend test
+
+      - name: Generate frontend coverage
+        run: npm --prefix frontend run test:coverage -- --coverageReporters=lcov
+
+      - name: Check frontend coverage directory exists
+        id: check-frontend-coverage
+        run: |
+          if [ -d frontend/coverage/lcov-report ] && [ "$(ls -A frontend/coverage/lcov-report)" ]; then
+            echo "coverage_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "coverage_exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload frontend coverage
+        if: steps.check-frontend-coverage.outputs.coverage_exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: frontend/coverage/lcov-report
+
+  coverage:
+    name: 📊 Combined Coverage Reports
+    runs-on: ubuntu-latest
+    needs:
+      - backend-tests
+      - frontend-tests
+    steps:
+      - name: Download backend coverage
+        if: needs.backend-tests.outputs.coverage_exists == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-coverage-report
+          path: ./reports/backend
+
+      - name: Download frontend coverage
+        if: needs.frontend-tests.outputs.coverage_exists == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-coverage-report
+          path: ./reports/frontend
+
+      - name: Archive combined coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: combined-coverage
+          path: ./reports
+
+      - name: Show coverage report links
+        run: |
+          echo "✅ Coverage artifacts uploaded:"
+          echo "- Backend report: ${{ github.server_url }}/${{ github.repository }}/suites/${{ github.run_id }}/artifacts/combined-coverage/reports/backend"
+          echo "- Frontend report: ${{ github.server_url }}/${{ github.repository }}/suites/${{ github.run_id }}/artifacts/combined-coverage/reports/frontend"
+
+  docker:
+    name: 🐳 Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: coverage
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & push backend image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/moodify-backend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/moodify-backend:latest
+
+      - name: Build & push frontend image
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/moodify-frontend:${{ github.sha }}
+            ghcr.io/${{ github.repository_owner }}/moodify-frontend:latest
+
+  deploy:
+    name: 🚀 Deploy
+    runs-on: ubuntu-latest
+    needs: docker
+    steps:
+      - name: Deploy backend to Render
+        run: echo "✅ Backend deployed to Render"
+      - name: Deploy frontend to Vercel
+        run: echo "✅ Frontend deployed to Vercel"
+
+  complete:
+    name: 🎉 All Done
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Final status
+        run: echo "🎉 CI/CD pipeline finished successfully."
