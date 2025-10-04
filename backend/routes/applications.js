@@ -1,12 +1,38 @@
 const express = require('express');
 const router = express.Router();
 const Application = require('../models/Application');
+const Job = require('../models/Job');
+const { sendStageChangeEmail } = require('../utils/email');
 
-// Get all applications (for admin use)
+// Get all applications (for admin use) with filtering
 router.get('/', async (req, res, next) => {
   try {
-    const applications = await Application.find().populate('job');
+    const { jobId, stage, q, minRating } = req.query;
+    const filter = {};
+
+    if (jobId) filter.job = jobId;
+    if (stage) filter.status = stage;
+    if (minRating) filter['scorecard.rating'] = { $gte: Number(minRating) };
+    if (q) {
+      filter.$or = [
+        { candidateName: { $regex: q, $options: 'i' } },
+        { coverLetter: { $regex: q, $options: 'i' } }
+      ];
+    }
+
+    const applications = await Application.find(filter).populate('job');
     res.json(applications);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Get single application by ID
+router.get('/:id', async (req, res, next) => {
+  try {
+    const application = await Application.findById(req.params.id).populate('job');
+    if (!application) return res.status(404).json({ error: 'Application not found' });
+    res.json(application);
   } catch (error) {
     next(error);
   }
@@ -25,6 +51,70 @@ router.post('/', async (req, res, next) => {
     });
     const savedApplication = await newApplication.save();
     res.status(201).json(savedApplication);
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update application status (stage change)
+router.patch('/:id/status', async (req, res, next) => {
+  try {
+    const { to, note } = req.body;
+    const application = await Application.findById(req.params.id).populate('job');
+    
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    const job = application.job;
+    if (!job.stages.includes(to)) {
+      return res.status(400).json({ error: 'Invalid stage for this job' });
+    }
+
+    const historyEntry = {
+      from: application.status,
+      to: to,
+      changedAt: new Date(),
+      note: note || ''
+    };
+
+    application.status = to;
+    application.stageHistory.push(historyEntry);
+    
+    await application.save();
+
+    // Send email notification if template is enabled
+    const emailResult = await sendStageChangeEmail(application, job, to);
+    
+    res.json({ 
+      application, 
+      emailSent: emailResult.success,
+      emailMessage: emailResult.message 
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Update application scorecard
+router.patch('/:id/scorecard', async (req, res, next) => {
+  try {
+    const { rating, competencies, summary } = req.body;
+    const application = await Application.findById(req.params.id);
+    
+    if (!application) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+
+    application.scorecard = {
+      rating,
+      competencies: competencies || [],
+      summary: summary || '',
+      updatedAt: new Date()
+    };
+    
+    await application.save();
+    res.json(application);
   } catch (error) {
     next(error);
   }

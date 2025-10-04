@@ -25,7 +25,30 @@ const ApplicationSchema = new mongoose.Schema({
   appliedAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  status: {
+    type: String,
+    enum: ['applied', 'phone_screen', 'onsite', 'offer', 'hired', 'rejected'],
+    default: 'applied'
+  },
+  scorecard: {
+    rating: { type: Number, min: 1, max: 5 },
+    competencies: [{
+      key: String,
+      rating: { type: Number, min: 1, max: 5 },
+      notes: String
+    }],
+    summary: String,
+    updatedAt: Date,
+    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  },
+  stageHistory: [{
+    from: String,
+    to: String,
+    changedAt: { type: Date, default: Date.now },
+    changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    note: String
+  }]
 });
 
 module.exports = mongoose.model('Application', ApplicationSchema);

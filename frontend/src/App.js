@@ -9,12 +9,13 @@ import Footer from './components/Footer';
 import JobList from './components/JobList';
 import JobForm from './components/JobForm';
 import ApplicationForm from './components/ApplicationForm';
+import PipelineBoard from './components/PipelineBoard';
 import config from './config';
 
 function App() {
   const [jobs, setJobs] = useState([]);
   const [selectedJob, setSelectedJob] = useState(null);
-  const [view, setView] = useState('list'); // 'list' | 'jobDetail' | 'apply' | 'postJob'
+  const [view, setView] = useState('list'); // 'list' | 'jobDetail' | 'apply' | 'postJob' | 'pipeline'
 
   useEffect(() => {
     fetchJobs();
@@ -48,6 +49,11 @@ function App() {
     setView('list');
   };
 
+  const handleViewPipeline = (job) => {
+    setSelectedJob(job);
+    setView('pipeline');
+  };
+
   return (
     <>
       <Header companyName={config.companyName} logoUrl={config.companyLogoUrl} />
@@ -59,7 +65,12 @@ function App() {
                 Post a New Job
               </Button>
             </Box>
-            <JobList jobs={jobs} onJobSelect={handleJobSelect} onApplyClick={handleApplyClick} />
+            <JobList 
+              jobs={jobs} 
+              onJobSelect={handleJobSelect} 
+              onApplyClick={handleApplyClick}
+              onViewPipeline={handleViewPipeline}
+            />
           </>
         )}
         {view === 'jobDetail' && selectedJob && (
@@ -83,8 +94,11 @@ function App() {
               <Button variant="outlined" onClick={() => setView('list')} sx={{ mr: 2 }}>
                 Back to Job Listings
               </Button>
-              <Button variant="contained" onClick={() => handleApplyClick(selectedJob)}>
+              <Button variant="contained" onClick={() => handleApplyClick(selectedJob)} sx={{ mr: 2 }}>
                 Apply
+              </Button>
+              <Button variant="outlined" onClick={() => handleViewPipeline(selectedJob)}>
+                View Pipeline
               </Button>
             </Box>
           </Box>
@@ -94,6 +108,9 @@ function App() {
         )}
         {view === 'postJob' && (
           <JobForm onJobPosted={handleJobPosted} onCancel={() => setView('list')} />
+        )}
+        {view === 'pipeline' && selectedJob && (
+          <PipelineBoard jobId={selectedJob._id} onBack={() => setView('list')} />
         )}
       </Container>
       <Footer companyName={config.companyName} />

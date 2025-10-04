@@ -13,6 +13,11 @@ This is a fully customizable, production‑ready job application platform built 
 
 - **Job Postings:** Create, update, delete, and list job postings.
 - **Candidate Applications:** Submit applications with resume URLs and cover letters.
+- **Hiring Pipeline:** Move candidates through customizable stages using a drag-and-drop Kanban board.
+- **Scorecards:** Structured feedback with ratings and competency evaluations for each candidate.
+- **Stage Timeline:** Track candidate progression through different stages with timestamps and notes.
+- **Email Notifications:** Automated email notifications on stage changes (configurable via templates).
+- **Search & Filter:** Search candidates by name/email and filter by stage or rating.
 - **Customizable UI & Backend:** Modify company branding and functionality with ease.
 - **Modern, Responsive Design:** Built with Material UI to ensure a polished look across devices.
 - **Security:** Implements Helmet and CORS for added security.
@@ -21,8 +26,8 @@ This is a fully customizable, production‑ready job application platform built 
 
 ## Technology Stack
 
-- **Backend:** Node.js, Express, MongoDB, Mongoose, dotenv, helmet, cors.
-- **Frontend:** React, Material UI (MUI), Axios.
+- **Backend:** Node.js, Express, MongoDB, Mongoose, Nodemailer, dotenv, helmet, cors.
+- **Frontend:** React, Material UI (MUI), @mui/lab, @dnd-kit, Axios.
 - **Database:** MongoDB
 
 ---
@@ -56,7 +61,13 @@ job-application-app/
 │       │   ├── Footer.js
 │       │   ├── JobList.js
 │       │   ├── JobForm.js
-│       │   └── ApplicationForm.js
+│       │   ├── ApplicationForm.js
+│       │   ├── PipelineBoard.js
+│       │   ├── ApplicationCard.js
+│       │   ├── ApplicationDetailDialog.js
+│       │   ├── ScorecardForm.js
+│       │   ├── TimelineList.js
+│       │   └── DroppableStage.js
 │       └── styles/
 │           └── main.css
 └── README.md
@@ -90,7 +101,15 @@ job-application-app/
    MONGO_URI=mongodb://localhost:27017/job_applications_db
    COMPANY_NAME=YourCompanyName
    COMPANY_LOGO_URL=https://example.com/logo.png
+   
+   # Optional: SMTP Configuration for Email Notifications
+   SMTP_HOST=smtp.gmail.com
+   SMTP_PORT=587
+   SMTP_USER=your-email@gmail.com
+   SMTP_PASS=your-app-password
    ```
+   
+   See `backend/.env.example` for a complete example.
 
 4. **Start the backend server:**
   - For development:
@@ -106,6 +125,44 @@ job-application-app/
   - Health Check: `GET http://localhost:5000/api/health`
   - Jobs: `http://localhost:5000/api/jobs`
   - Applications: `http://localhost:5000/api/applications`
+
+---
+
+## API Documentation
+
+### Jobs
+
+- **GET /api/jobs** - Get all jobs
+- **GET /api/jobs/:id** - Get a single job by ID
+- **POST /api/jobs** - Create a new job
+  - Body: `{ title, description, location, type, department }`
+- **PUT /api/jobs/:id** - Update a job
+- **DELETE /api/jobs/:id** - Delete a job
+
+### Applications
+
+- **GET /api/applications** - Get all applications (with optional filters)
+  - Query params: `jobId`, `stage`, `q` (search), `minRating`
+- **GET /api/applications/:id** - Get a single application by ID
+- **POST /api/applications** - Create a new application
+  - Body: `{ job, candidateName, candidateEmail, resumeUrl, coverLetter }`
+- **PATCH /api/applications/:id/status** - Update application stage
+  - Body: `{ to, note? }`
+  - Returns: Application with email notification status
+- **PATCH /api/applications/:id/scorecard** - Update application scorecard
+  - Body: `{ rating, competencies[], summary }`
+
+### Pipeline Stages
+
+Default stages (customizable per job):
+- `applied` - Initial application received
+- `phone_screen` - Phone screening scheduled/completed
+- `onsite` - Onsite interview scheduled/completed
+- `offer` - Offer extended
+- `hired` - Candidate accepted offer
+- `rejected` - Application rejected
+
+---
 
 ### Frontend Setup
 
