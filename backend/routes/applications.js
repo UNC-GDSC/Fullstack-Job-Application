@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Application = require('../models/Application');
 const Job = require('../models/Job');
+const { sendStageChangeEmail } = require('../utils/email');
 
 // Get all applications (for admin use) with filtering
 router.get('/', async (req, res, next) => {
@@ -81,7 +82,15 @@ router.patch('/:id/status', async (req, res, next) => {
     application.stageHistory.push(historyEntry);
     
     await application.save();
-    res.json(application);
+
+    // Send email notification if template is enabled
+    const emailResult = await sendStageChangeEmail(application, job, to);
+    
+    res.json({ 
+      application, 
+      emailSent: emailResult.success,
+      emailMessage: emailResult.message 
+    });
   } catch (error) {
     next(error);
   }
