@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import Button from '@mui/material/Button';
 import Grid from '@mui/material/Grid';
 
-const JobList = ({ jobs, onJobSelect, onApplyClick }) => {
+const JobList = ({ jobs, onJobSelect, onApplyClick, onViewPipeline }) => {
   return (
     <Grid container spacing={2}>
       {jobs.length === 0 ? (
@@ -29,6 +29,11 @@ const JobList = ({ jobs, onJobSelect, onApplyClick }) => {
                 <Button size="small" variant="contained" onClick={() => onApplyClick(job)}>
                   Apply
                 </Button>
+                {onViewPipeline && (
+                  <Button size="small" onClick={() => onViewPipeline(job)}>
+                    Pipeline
+                  </Button>
+                )}
               </CardActions>
             </Card>
           </Grid>
