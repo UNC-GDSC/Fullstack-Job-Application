@@ -1,0 +1,18 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true,
+    "commonjs": true
+  },
+  "extends": ["eslint:recommended"],
+  "parserOptions": {
+    "ecmaVersion": "latest",
+    "sourceType": "commonjs"
+  },
+  "rules": {
+    "no-console": "off",
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_|^next" }],
+    "prefer-const": "warn",
+    "no-process-exit": "warn"
+  }
+}

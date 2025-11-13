@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: job-app-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: job_applications_db
+    ports:
+      - '27017:27017'
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+    networks:
+      - job-app-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: job-app-backend
+    restart: unless-stopped
+    ports:
+      - '5000:5000'
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      MONGO_URI: mongodb://admin:password123@mongodb:27017/job_applications_db?authSource=admin
+      COMPANY_NAME: Your Company Name
+      COMPANY_LOGO_URL: https://example.com/logo.png
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - job-app-network
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+
+  # Frontend Application
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: job-app-frontend
+    restart: unless-stopped
+    ports:
+      - '80:80'
+    environment:
+      REACT_APP_API_URL: http://localhost:5000
+      REACT_APP_COMPANY_NAME: Your Company Name
+      REACT_APP_COMPANY_LOGO_URL: https://example.com/logo.png
+    depends_on:
+      - backend
+    networks:
+      - job-app-network
+
+networks:
+  job-app-network:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  mongodb_config:

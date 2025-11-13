@@ -1,0 +1,53 @@
+{
+  "name": "job-application-portal",
+  "version": "1.0.0",
+  "description": "A fullstack job application portal with Node.js backend and React frontend",
+  "private": true,
+  "scripts": {
+    "install:backend": "cd backend && npm install",
+    "install:frontend": "cd frontend && npm install",
+    "install:all": "npm run install:backend && npm run install:frontend",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm start",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start",
+    "build:frontend": "cd frontend && npm run build",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "test": "npm run test:backend && npm run test:frontend",
+    "lint:backend": "cd backend && npm run lint --if-present",
+    "lint:frontend": "cd frontend && npm run lint --if-present",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "format:check": "prettier --check \"**/*.{js,jsx,json,md,yml,yaml}\"",
+    "format": "prettier --write \"**/*.{js,jsx,json,md,yml,yaml}\"",
+    "clean": "rm -rf node_modules backend/node_modules frontend/node_modules",
+    "docker:build": "docker-compose build",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/UNC-GDSC/Fullstack-Job-Application.git"
+  },
+  "keywords": [
+    "job-application",
+    "fullstack",
+    "nodejs",
+    "react",
+    "mongodb",
+    "express",
+    "material-ui"
+  ],
+  "author": "UNC-Chapel Hill GDSC",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prettier": "^3.2.5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  }
+}
